@@ -1,0 +1,169 @@
+<html>
+
+<body>
+</body>
+
+</html>
+
+<style>
+    canvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 1;
+    }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/p5@1.4.1/lib/p5.js"></script>
+
+<script>
+    //p5.disableFriendlyErrors = true;
+
+    function distance(x1, y1, x2, y2) {
+        let dx = x2 - x1;
+        let dy = y2 - y1;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    const numberOfStars = 50;
+    let center_x;
+    let center_y;
+
+    class Sun {
+        constructor() {
+            this.x = center_x;
+            this.y = center_y;
+            this.size = 50;
+            this.speed = 0.005;
+        }
+
+        move() {
+            this.x = lerp(this.x, mouseX, this.speed);
+            this.y = lerp(this.y, mouseY, this.speed);
+            center_x = this.x;
+            center_y = this.y;
+        }
+
+        draw() {
+            noStroke();
+            fill(15, 15, 15, 125);
+            circle(this.x, this.y, this.size);
+        }
+    }
+
+    class Star {
+        constructor(x, y) {
+            this.opacity = Math.random();
+            this.size = Math.random() * 15;
+            this.min_size = Math.random() * 20;
+            this.max_size = Math.random() * 20;
+            this.size_dir = Math.floor(Math.random() * 2);
+            this.size_speed = Math.random() / 10;
+            this.current_x = center_x;
+            this.current_y = center_y;
+            this.on_position = false;
+            this.x = x;
+            this.y = y;
+            this.theta = distance(this.x, this.y, this.current_x, this.current_y) / 50000;
+        }
+
+        move() {
+            this.x = Math.cos(this.theta) * (this.x - center_x) - Math.sin(this.theta) * (this.y - center_y) + center_x;
+            this.y = Math.sin(this.theta) * (this.x - center_x) + Math.cos(this.theta) * (this.y - center_y) + center_y;
+            this.current_x = lerp(this.current_x, this.x, this.size_speed);
+            this.current_y = lerp(this.current_y, this.y, this.size_speed);
+
+
+            if (this.size_dir >= 1) {
+                this.size = lerp(this.size, this.max_size, 0.025);
+                if (Math.abs(this.size - this.max_size) < 1) this.size_dir = 0;
+            } else {
+                this.size = lerp(this.size, this.min_size, 0.025);
+                if (Math.abs(this.size - this.min_size) < 1) this.size_dir = 1;
+            }
+        }
+
+        draw() {
+            noStroke();
+            fill(255, 255, 255, this.opacity * 255);
+            circle(this.current_x, this.current_y, this.size);
+        }
+    }
+
+    let count = 0;
+    var stars = new Array(numberOfStars);
+    var sun;
+
+    const State = {
+        VOID: "VOID",
+        CREATING: "CREATING",
+        CREATED: "CREATED",
+        DESTROYED: "DESTROYED"
+    }
+
+    function create_universe() {
+        for (i = 0; i < numberOfStars; i++) {
+            tmp = new Star(Math.random() * windowWidth, Math.random() * windowHeight);
+            stars.push(tmp);
+        }
+    }
+
+    function setup() {
+        createCanvas(windowWidth, windowHeight);
+        noCursor();
+        center_x = windowWidth / 2;
+        center_y = 10;
+        state = State.VOID;
+        sun = new Sun();
+        noSmooth();
+    }
+
+    function mouseClicked() {
+        center_x = mouseX;
+        center_y = mouseY;
+        state = State.CREATING;
+    }
+
+    function draw() {
+        background(15);
+
+        switch (state) {
+            case State.CREATING:
+                create_universe();
+                state = State.CREATED;
+            case State.CREATED:
+                drawBackground();
+                stars.forEach(x => {
+                    x.move();
+                    x.draw();
+                });
+        }
+
+        sun.move();
+        sun.draw();
+    }
+
+    function drawBackground() {
+        const m = 100;
+
+        const topR = 255 * noise(count / m);
+        const topG = 255 * noise(1000 + count / m);
+        const topB = 255 * noise(2000 + count / m);
+        const bottomR = 255 * noise(3000 + count / m);
+        const bottomG = 255 * noise(4000 + count / m);
+        const bottomB = 255 * noise(5000 + count / m);
+
+        const topColor = color(topR, topG, topB);
+        const bottomColor = color(bottomR, bottomG, bottomB);
+
+        for (let y = 0; y < height; y++) {
+            const lineColor = lerpColor(topColor, bottomColor, y / height);
+
+            stroke(lineColor);
+            line(0, y, width, y);
+        }
+
+        if (frameCount % 4 == 0)
+            count++;
+    }
+</script>
